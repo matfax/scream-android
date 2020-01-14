@@ -203,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         if (track != null) {
-                            track.write(data, 5, data.length - 5, AudioTrack.WRITE_NON_BLOCKING);
+                            track.write(data, 5, data.length - 5);
                         }
                     }
                 } catch (IOException e) {
