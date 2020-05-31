@@ -3,6 +3,7 @@ package it.m2app.screamreceiver;
 import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioAttributes;
 import android.media.AudioTrack;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
@@ -18,17 +19,18 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class MainActivity extends AppCompatActivity {
-    private static final int HEADER_SIZE = 5;
-    private static final int MAX_SO_PACKETSIZE = 1152 + HEADER_SIZE;
+    private static final int HEADER_SIZE = 12;
+    private static final int MAX_SO_PACKETSIZE = 1280 + HEADER_SIZE;
 
     private boolean running = true;
     private AudioTrack track = null;
 
-    private int curSampleRate = 0;
-    private int curSampleSize = 0;
-    private int curChannels = 0;
+    private int curSampleSize = 16;
+    private int curChannels = 2;
 
     private String infoMsg;
 
@@ -62,10 +64,6 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
 
-                int curChannelMapLSB = 0;
-                int curChannelMapMSB = 0;
-                int curChannelMap;
-
                 AudioFormat format;
 
                 WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -79,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
                     infoMsg = "Awaiting for multicast packets.";
 
                     socket = new MulticastSocket(4010);
-                    group = InetAddress.getByName("239.255.77.77");
+                    group = InetAddress.getByName("224.0.0.56");
                     socket.joinGroup(group);
 
                     DatagramPacket packet;
@@ -91,120 +89,40 @@ public class MainActivity extends AppCompatActivity {
                         socket.receive(packet);
                         byte[] data = packet.getData();
 
-                        if (data.length > HEADER_SIZE) {
-                            int d0 = data[0] & 0xFF;
-                            int d1 = data[1] & 0xFF;
-                            int d2 = data[2] & 0xFF;
-                            int d3 = data[3] & 0xFF;
-                            int d4 = data[4] & 0xFF;
-                            if (curSampleRate != d0 || curSampleSize != d1 || curChannels != d2 || curChannelMapLSB != d3 || curChannelMapMSB != d4) {
-                                curSampleRate = d0;
-                                curSampleSize = d1;
-                                curChannels = d2;
-                                curChannelMapLSB = d3;
-                                curChannelMapMSB = d4;
-                                curChannelMap = (curChannelMapMSB << 8) | curChannelMapLSB;
+                        int sampleRate = 48000;
 
-                                int sampleRate = ((curSampleRate >= 128) ? 44100 : 48000) * (curSampleRate % 128);
+                        if (track == null) {// Android only support PCM 8, 16 or float. 24 and 32 bit integer are unsupported.
+                            AudioFormat.Builder formatBuilder = new AudioFormat.Builder();
 
-                                if (curSampleSize != 16) {// Android only support PCM 8, 16 or float. 24 and 32 bit integer are unsupported.
-                                    infoMsg = "Android doesn't support more than 16bit per sample. Please set Scream to 16bit, not "+curSampleSize;
-                                    System.err.println(infoMsg);
-                                    if (track != null) {
-                                        track.stop();
-                                        track.release();
-                                    }
-                                    track = null;
-                                    continue;
-                                }
-
-                                AudioFormat.Builder formatBuilder = new AudioFormat.Builder();
-
-                                if (curChannels == 1) {
-                                    format = formatBuilder
-                                            .setSampleRate(sampleRate)
-                                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                                            .build();
-                                } else if (curChannels == 2) {
-                                    format = formatBuilder
-                                            .setSampleRate(sampleRate)
-                                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                                            .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
-                                            .build();
-                                } else {
-                                    int channelMask = curChannelMap << 2;//windows and android constants for channels are in the same order, but android values are shifted by 2 positions
-                                    /*
-                                    int channelMask = 0;
-                                    // k is the key to map a windows SPEAKER_* position to a PA_CHANNEL_POSITION_*
-                                    // it goes from 0 (SPEAKER_FRONT_LEFT) up to 10 (SPEAKER_SIDE_RIGHT) following the order in ksmedia.h
-                                    // the SPEAKER_TOP_* values are not used
-                                    int k = -1;
-                                    for (int i = 0; i < curChannels; i++) {
-                                        for (int j = k + 1; j <= 10; j++) {// check the channel map bit by bit from lsb to msb, starting from were we left on the previous step
-                                            if(((curChannelMap >> j) & 0x01) !=0){// if the bit in j position is set then we have the key for this channel
-                                                k = j;
-                                                break;
-                                            }
-                                        }
-                                        // map the key value to a pulseaudio channel position
-                                        switch (k) {
-                                            case 0:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_FRONT_LEFT;
-                                                break;
-                                            case 1:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_FRONT_RIGHT;
-                                                break;
-                                            case 2:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_FRONT_CENTER;
-                                                break;
-                                            case 3:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_LOW_FREQUENCY;
-                                                break;
-                                            case 4:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_BACK_LEFT;
-                                                break;
-                                            case 5:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_BACK_RIGHT;
-                                                break;
-                                            case 6:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_FRONT_LEFT_OF_CENTER;
-                                                break;
-                                            case 7:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_FRONT_RIGHT_OF_CENTER;
-                                                break;
-                                            case 8:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_BACK_CENTER;
-                                                break;
-                                            case 9:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_SIDE_LEFT;
-                                                break;
-                                            case 10:
-                                                channelMask |= AudioFormat.CHANNEL_OUT_SIDE_RIGHT;
-                                                break;
-                                            default:
-                                                // center is a safe default, at least it's balanced. This shouldn't happen, but it's better to have a fallback
-                                                channelMask |= AudioFormat.CHANNEL_OUT_FRONT_CENTER;
-                                        }
-                                    }
-                                    */
-                                    format = formatBuilder
-                                            .setSampleRate(sampleRate)
-                                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                                            .setChannelMask(channelMask)
-                                            .build();
-                                }
-                                int bufferSize = AudioTrack.getMinBufferSize(format.getSampleRate(), format.getChannelMask(), format.getEncoding());
-                                track = new AudioTrack(AudioManager.STREAM_MUSIC, format.getSampleRate(), format.getChannelMask(), format.getEncoding(), bufferSize, AudioTrack.MODE_STREAM);
-                                track.play();
-                                infoMsg = "Switched format to sample rate " + sampleRate + ", sample size " + curSampleSize + " and " + curChannels + " channels.";
-                                System.err.println(infoMsg);
+                            if (curChannels == 1) {
+                                format = formatBuilder
+                                        .setSampleRate(sampleRate)
+                                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                        .build();
+                            } else if (curChannels == 2) {
+                                format = formatBuilder
+                                        .setSampleRate(sampleRate)
+                                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                        .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
+                                        .build();
+                            } else {
+                                throw new IOException();
                             }
+                            int bufferSize = AudioTrack.getMinBufferSize(format.getSampleRate(), format.getChannelMask(), format.getEncoding());
+                            track = new AudioTrack(
+                                new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build(),
+                                format, bufferSize, AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE);
+                            track.play();
+
+                            AudioManager aManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+                            infoMsg = "Switched format to sample rate " + sampleRate + ", sample size " + curSampleSize + " and " + curChannels + " channels." + data.length + " opf:" + aManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER) + " samr:" + aManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
+                            System.err.println(infoMsg);
                         }
 
-                        if (track != null) {
-                            track.write(data, 5, data.length - 5);
-                        }
+                        short[] shorts = new short[(data.length - HEADER_SIZE) / 2];
+                        ByteBuffer.wrap(data, HEADER_SIZE, data.length - HEADER_SIZE).order(ByteOrder.BIG_ENDIAN).asShortBuffer().get(shorts);
+                        track.write(shorts, 0, shorts.length);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();

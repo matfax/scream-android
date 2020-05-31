@@ -1,5 +1,7 @@
 # scream-android
 
+Modified to receive from PulseAudio's module-rtp-send.
+
 scream-android is a simple [Scream](https://github.com/duncanthrax/scream) receiver for Android
 
 ## Compile
