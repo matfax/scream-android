@@ -24,7 +24,7 @@ import java.nio.ByteOrder;
 
 public class MainActivity extends AppCompatActivity {
     private static final int HEADER_SIZE = 12;
-    private static final int MAX_SO_PACKETSIZE = 1280 + HEADER_SIZE;
+    private static final int MAX_SO_PACKETSIZE = 320 + HEADER_SIZE;
 
     private boolean running = true;
     private AudioTrack track = null;
