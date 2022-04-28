@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="16dp"
     tools:context=".MainActivity">
@@ -13,9 +14,72 @@
         android:layout_height="wrap_content"
         android:text="@string/intro" />
 
-    <TextView
-        android:id="@+id/info"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="" />
+        android:orientation="horizontal"
+        android:layout_gravity="center"
+        android:gravity="center">
+
+        <com.github.anastr.speedviewlib.PointerSpeedometer
+            android:id="@+id/sample_rate"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="40dp"
+            app:sv_startDegree="180"
+            app:sv_endDegree="360"
+            app:sv_unit="KHz"
+            app:sv_maxSpeed="200"
+            app:sv_backgroundCircleColor="@color/colorAccent"
+            app:sv_withTremble="false" />
+
+        <com.github.anastr.speedviewlib.PointerSpeedometer
+            android:id="@+id/sample_size"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="40dp"
+            app:sv_startDegree="180"
+            app:sv_endDegree="360"
+            app:sv_unit="Bit"
+            app:sv_maxSpeed="64"
+            app:sv_backgroundCircleColor="@color/colorPrimary"
+            app:sv_withTremble="false" />
+
+        <com.github.anastr.speedviewlib.PointerSpeedometer
+            android:id="@+id/channels"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="40dp"
+            app:sv_startDegree="180"
+            app:sv_endDegree="360"
+            app:sv_unit="Channels"
+            app:sv_maxSpeed="8"
+            app:sv_backgroundCircleColor="@color/colorAccent"
+            app:sv_withTremble="false" />
+
+    </LinearLayout>
+
+    <RelativeLayout android:id="@+id/RelativeLayout01"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp">
+
+        <Button
+            android:id="@+id/start_service"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/start_foreground_service"
+            android:layout_centerInParent="true"
+            android:paddingHorizontal="40dp" />
+
+        <Button
+            android:id="@+id/stop_service"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/stop_foreground_service"
+            android:layout_centerInParent="true"
+            android:paddingHorizontal="40dp" />
+
+    </RelativeLayout>
+
 </LinearLayout>

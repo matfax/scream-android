@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Android Scream Receiver</string>
-    <string name="intro">This is a very simple receiver for <a href="https://github.com/duncanthrax/scream">Scream</a>. You can contribute or fill bug reports <a href="https://github.com/martinellimarco/scream-android">here</a>.</string>
+    <string name="intro">This is a very simple receiver for <a href="https://github.com/duncanthrax/scream">Scream</a>.</string>
+    <string name="start_foreground_service">Start Service</string>
+    <string name="stop_foreground_service">Stop Service</string>
+    <string name="unset">-</string>
 </resources>
