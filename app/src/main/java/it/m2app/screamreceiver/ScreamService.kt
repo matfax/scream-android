@@ -27,7 +27,6 @@ class ScreamService: Service() {
     }
 
     lateinit var settings: ScreamSettings
-    private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var track: AudioTrack
     private lateinit var socket: MulticastSocket
     private lateinit var group: InetAddress
@@ -70,12 +69,12 @@ class ScreamService: Service() {
     private fun startService() {
         if (isServiceStarted) return
         logger.info { "Starting the foreground service task" }
-        Toast.makeText(this, "Scream receiver starting its task", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Scream receiver starting its operation", Toast.LENGTH_SHORT).show()
         isServiceStarted = true
         settings.serviceStarted = true
 
         // we need this lock so our service gets not affected by Doze Mode
-        wakeLock =
+        val wakeLock =
             (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
                 newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ScreamService::lock").apply {
                     acquire(6*60*60*1000L /*60 minutes*/)
@@ -94,7 +93,12 @@ class ScreamService: Service() {
             val buf = ByteArray(MAX_SO_PACKETSIZE)
             packet = DatagramPacket(buf, buf.size)
             while (isServiceStarted) {
-                readFromStream(packet)
+                try {
+                    readFromStream(packet)
+                } catch (e: Exception) {
+                    logger.warn(e) { "Failed to read audio package and play it" }
+                    stopService()
+                }
             }
             if (this@ScreamService::track.isInitialized) {
                 track.stop()
@@ -103,24 +107,28 @@ class ScreamService: Service() {
             try {
                 socket.leaveGroup(group)
             } catch (e: IOException) {
-                logger.error(e) { "Failure to leave multicast group" }
+                logger.warn(e) { "Failed to leave multicast group" }
             }
-            socket.close()
+            try {
+                socket.close()
+            } catch (e: IOException) {
+                logger.warn(e) { "Failed to close socket" }
+            }
+            wakeLock.release()
             multicastLock.release()
-            logger.debug { "End of the loop for the service" }
         }
     }
 
     private fun stopService() {
         logger.info { "Stopping the foreground service" }
         isServiceStarted = false
-        Toast.makeText(this, "Scream receiver service stopping", Toast.LENGTH_SHORT).show()
-        if (this::wakeLock.isInitialized && wakeLock.isHeld) {
-            wakeLock.release()
-            stopForeground(true)
-            stopSelf()
-        }
         settings.serviceStarted = false
+        settings.sampleSize = 0
+        settings.channels = 0
+        settings.sampleRate = 0
+        Toast.makeText(this, "Scream receiver service stopping", Toast.LENGTH_SHORT).show()
+        stopForeground(true)
+        stopSelf()
     }
 
     private fun createNotification(): Notification {
