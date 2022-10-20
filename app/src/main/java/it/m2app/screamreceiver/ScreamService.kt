@@ -77,7 +77,7 @@ class ScreamService: Service() {
         val wakeLock =
             (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
                 newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ScreamService::lock").apply {
-                    acquire(6*60*60*1000L /*60 minutes*/)
+                    acquire(7*24*60*60*1000L /*60 minutes*/)
                 }
             }
 
