@@ -96,8 +96,7 @@ class ScreamService: Service() {
                 try {
                     readFromStream(packet)
                 } catch (e: Exception) {
-                    logger.warn(e) { "Failed to read audio package and play it" }
-                    stopService()
+                    logger.debug(e) { "Failed to read audio package and play it" }
                 }
             }
             if (this@ScreamService::track.isInitialized) {
