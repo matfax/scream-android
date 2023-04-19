@@ -1,10 +1,16 @@
 package it.m2app.screamreceiver
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.github.anastr.speedviewlib.PointerSpeedometer
@@ -32,12 +38,12 @@ class MainActivity : AppCompatActivity() {
         val channelsTextView = findViewById<PointerSpeedometer>(R.id.channels)
 
         startButton.setOnClickListener {
-            logger.info { "START THE FOREGROUND SERVICE ON DEMAND" }
+            logger.info { "Starting the Scream Receiver service" }
             actionOnService(Actions.START)
         }
 
         stopButton.setOnClickListener {
-            logger.info { "STOP THE FOREGROUND SERVICE ON DEMAND" }
+            logger.info { "Stopping the Scream Receiver service" }
             actionOnService(Actions.STOP)
         }
 

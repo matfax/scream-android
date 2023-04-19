@@ -126,7 +126,7 @@ class ScreamService: Service() {
         settings.channels = 0
         settings.sampleRate = 0
         Toast.makeText(this, "Scream receiver service stopping", Toast.LENGTH_SHORT).show()
-        stopForeground(true)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
